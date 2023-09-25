@@ -3,6 +3,8 @@
 
 from bs4 import BeautifulSoup
 from lxml import etree
+import pandas as pd
+
 
 class TrainingDatasetBuilder:
     # In order this class to work you need to create folder 'data' in the project folder root.
@@ -11,18 +13,38 @@ class TrainingDatasetBuilder:
 
     # Arguments:
     # page_dir - the directory where bank website pages are located
-    # bank_i - bank index
-    def __init__(self, page_dir, bank_i):
-        self.page_dir = page_dir
-        self.bank_i = bank_i
+    def __init__(self, data_dir):
+        self.data_dir = data_dir
 
-    # get_clickable loads clickable elements
-    # url_id - url identifier, matches the name of the file with the page that is loaded when this url is opened
-    def get_clickable(self, url_id) -> None:
-        with open(f'{self.page_dir}/{self.bank_i}/{url_id}', 'r', encoding='utf-8') as file:
-            text = file.read()
-        print(text)
+    # get_clickable loads clickable elements and save info to corresponding files
+    def get_clickable(self) -> None:
+        # Saving in pages_df info about loaded pages
+        pages_df = pd.read_csv(f'{self.data_dir}/pages.csv')
+        for page_i, page in pages_df.iterrows():
+            # print(page['bank_i'])
+            # Open loaded page to variable 'page_content'
+            with open(f'{self.data_dir}/pages/{page["bank_i"]}/{page["url_id"]}', 'r', encoding='utf-8') as file:
+                page_content = file.read()
+
+            # Loadong allclickable elements in list: 'elements'
+            soup = BeautifulSoup(page_content, "html.parser")
+            dom = etree.HTML(str(soup))
+            elements = dom.xpath('//a')
+            for element in elements:
+                print(element.text)
+        # print(pages_df['url_id'].head(2))
+        # with open(f'{self.data_dir}/pages/{self.bank_i}/{url_id}', 'r', encoding='utf-8') as file:
+        #     text = file.read()
+        # soup = BeautifulSoup(text, "html.parser")
+        # dom = etree.HTML(str(soup))
+        # elements = dom.xpath('//a[@href="/offices/"]')
+        print
+        # for element in elements:
+        # print(element.text)
+        # full_xpath = dom.getpath(element)
+        # print(full_xpath)
+        # print(text)
 
 
-ds_builder = TrainingDatasetBuilder('data/pages', '263')
-ds_builder.get_clickable(334)
+ds_builder = TrainingDatasetBuilder('data')
+ds_builder.get_clickable()
