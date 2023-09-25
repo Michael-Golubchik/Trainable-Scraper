@@ -26,7 +26,7 @@ class TrainingDatasetBuilder:
             with open(f'{self.data_dir}/pages/{page["bank_i"]}/{page["url_id"]}', 'r', encoding='utf-8') as file:
                 page_content = file.read()
 
-            # Loadong allclickable elements in list: 'elements'
+            # Loading all clickable elements in list: 'elements'
             soup = BeautifulSoup(page_content, "html.parser")
             dom = etree.HTML(str(soup))
             elements = dom.xpath('//a')
