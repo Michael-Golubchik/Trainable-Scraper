@@ -50,7 +50,7 @@ https://www.youtube.com/watch?v=05xoR--oJSI
 ## Описание Данных
 
 Первичные данные можно загрузить по следующей ссылке 
-https://drive.google.com/drive/folders/16ErrDDfLu2Vw7rhK6ioqzsX5TqjH3lcM
+https://drive.google.com/drive/folders/16ErrDDfLu2Vw7rhK6ioqzsX5TqjH3lcM?usp=drive_link
 
 Загруженные страницы хранятся в отдельных файлах в структуре папок. 
 
