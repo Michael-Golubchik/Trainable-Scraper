@@ -17,6 +17,16 @@ def get_elements(html_str: str, xpath_str: str):
     return dom.xpath(xpath_str)
 
 
+def get_anchor(element):
+    anchor = (element.xpath('string()')
+              .replace("\n", "")
+              .strip())
+    return anchor
+
+
+# elements[0].xpath('string()').replace("\n", "")
+
+
 class TrainingDatasetBuilder:
     # In order this class to work you need to create folder 'data' in the project folder root.
     # And extract files and folders from page.zip there
@@ -32,6 +42,10 @@ class TrainingDatasetBuilder:
     def get_clickable(self) -> None:
         # Saving in pages_df info about loaded pages
         pages_df = pd.read_csv(f'{self.data_dir}/pages.csv')
+        # Добавим новую колонку с индексами родительских url и заполним нулями
+        pages_df = pages_df.assign(parent_url_id=-1)
+        # Датафрейм со всеми анкорами всех страниц всех банков
+        anchor_df = pd.DataFrame(columns=['bank_i', 'url_id', 'parent_url_id', 'anchor', 'to_click'])
 
         # Iterate through banks
         for bank_i in pages_df['bank_i'].unique():
@@ -67,7 +81,7 @@ class TrainingDatasetBuilder:
                     parent_url_id = bank_pages_df.loc[bank_pages_df['url'] == parent_url, 'url_id'].iloc[0]
                     print('parent_url_id', parent_url_id)
                     # Добавим информацию об id родительской url в датафрейм со страницами
-                    pages_df[pages_df['url_id'] == url_id]['parent_url_id'] = parent_url_id
+                    pages_df.loc[pages_df['url_id'] == url_id, 'parent_url_id'] = int(parent_url_id)
 
                     # Выделяем последнюю команду на кликанье элемента
                     click_xpath = cur_url.replace(page["parent_url"], '')
@@ -85,7 +99,7 @@ class TrainingDatasetBuilder:
                     # Loading all clickable elements in list: 'elements'
                     if len(elements) > 0:
                         # Если нашли на странице с родительским url элемент, который кликали
-                        anchor_to_click = elements[0].xpath('string()').replace("\n", "")
+                        anchor_to_click = get_anchor(elements[0])
                     else:
                         print('Ошибка. Не нашли на странице с родительским url элемент который кликали')
                         exit(1)
@@ -106,14 +120,14 @@ class TrainingDatasetBuilder:
                             'to_click'] = True
 
                     # print(anchor_dfs[parent_url_id][anchor_dfs[parent_url_id]['to_click']])
-                    print(anchor_dfs.keys())
+                    # print(anchor_dfs.keys())
 
-                elements = get_elements(page_content, '//a')
+                elements = get_elements(page_content, '//a | //button')
                 # Loading all clickable elements in list: 'elements'
                 for element in elements:
                     # print(element.text)
                     # В cur_anchor заносим текст внутри найденной ссылки, но удаляем переносы строк
-                    cur_anchor = element.xpath('string()').replace("\n", "")
+                    cur_anchor = get_anchor(element)
                     # We are adding next clickable element on page to the training data frame: anchor_dfs[cur_url]
                     anchor_dfs[url_id].loc[len(anchor_dfs[url_id].index)] = \
                         [cur_anchor, False]
@@ -126,11 +140,24 @@ class TrainingDatasetBuilder:
                 anchor_file_path = f'{self.data_dir}/pages/{bank_i}/{url_id}_anchors.csv'
                 # Save dataframe to store anchors to file
                 anchor_dfs[url_id].to_csv(anchor_file_path, index=False)
+                # Добавим информацию по анкорам в общий датафрейм anchor_df для всех сайтов банков
+                temp_anchor_df = anchor_dfs[url_id].copy()
+                temp_anchor_df = temp_anchor_df.assign(
+                    bank_i=bank_i,
+                    url_id=url_id,
+                    parent_url_id=pages_df.loc[pages_df['url_id'] == url_id, 'parent_url_id'].iloc[0])
+                anchor_df = pd.concat([anchor_df, temp_anchor_df],
+                                      ignore_index=True)
 
             # After finishing with the bank, we delete the dataframes for it to restore memory
             del anchor_dfs
             del bank_pages_df
             del page_dict
+
+        # Сохраняем информацию о загруженных страницах потому что добавили индекс родительской url
+        pages_df.to_csv(f'{self.data_dir}/pages_out.csv', index=False)
+        # Сохраняем информацию о всех анкорах на всех страницах всех банков
+        anchor_df.to_csv(f'{self.data_dir}/anchor_out.csv', index=False)
 
 
 ds_builder = TrainingDatasetBuilder('data')
